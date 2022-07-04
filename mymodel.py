@@ -112,11 +112,11 @@ class Encoder(nn.Module):
         res5 = self.enc4(res4) * 0.9 + res4 * 0.1
         res6 = self.down2(res5)
         res7 = self.enc5(res6) * 0.9 + res6 * 0.1
-        res8 = self.enc6(res7) * 0.9 + res7 * 0.1
-        res9 = self.down3(res8)
-        res10 = self.enc7(res9) * 0.9 + res9 * 0.1
-        res11 = self.enc8(res10) * 0.9 + res10 * 0.1
-        return res11
+        #res8 = self.enc6(res7) * 0.9 + res7 * 0.1
+        #res9 = self.down3(res8)
+        #res10 = self.enc7(res9) * 0.9 + res9 * 0.1
+        #res11 = self.enc8(res10) * 0.9 + res10 * 0.1
+        return res7
 
 
 class Decoder(nn.Module):
@@ -176,7 +176,7 @@ class Decoder(nn.Module):
             BasicConv2d(C_hid//8, C_hid//8, kernel_size=3, stride=1,
                                 padding=1, transpose=False, act_norm=True)
         )
-        self.readout = nn.Conv2d(C_hid//8, C_out, 1)
+        self.readout = nn.Conv2d(C_hid//4, C_out, 1)
     
     def forward(self, hid):
         res1 = self.dec1(hid) * 0.9 + hid * 0.1
@@ -185,12 +185,12 @@ class Decoder(nn.Module):
         res4 = self.dec3(res3) * 0.9 + res3 * 0.1
         res5 = self.dec4(res4) * 0.9 + res4 * 0.1
         res6 = self.up2(F.interpolate(res5, scale_factor=2, mode='nearest'))
-        res7 = self.dec5(res6) * 0.9 + res6 * 0.1
-        res8 = self.dec6(res7) * 0.9 + res7 * 0.1
-        res9 = self.up3(F.interpolate(res8, scale_factor=2, mode='nearest'))
-        res10 = self.dec7(res9) * 0.9 + res9 * 0.1
+        #res7 = self.dec5(res6) * 0.9 + res6 * 0.1
+        #res8 = self.dec6(res7) * 0.9 + res7 * 0.1
+        #res9 = self.up3(F.interpolate(res8, scale_factor=2, mode='nearest'))
+        #res10 = self.dec7(res9) * 0.9 + res9 * 0.1
         #res11 = self.dec8(res10) * 0.9 + res10 * 0.1
-        Y = self.readout(res10)
+        Y = self.readout(res6)
         return Y
 
 class Mid_Xnet(nn.Module):
@@ -237,8 +237,8 @@ class SimVP(nn.Module):
         super(SimVP, self).__init__()
         T, C, H, W = shape_in
         self.enc = Encoder(C, hid_S)
-        self.hid = Mid_Xnet(T*hid_S, hid_T, N_T, incep_ker, groups)
-        self.dec = Decoder(hid_S*8, C)
+        self.hid = Mid_Xnet(T*hid_S*4, hid_T, N_T, incep_ker, groups)
+        self.dec = Decoder(hid_S*4, C)
 
 
     def forward(self, x_raw):
@@ -247,13 +247,12 @@ class SimVP(nn.Module):
 
         embed = self.enc(x)
         _, C_, H_, W_ = embed.shape
-        """
+        
         z = embed.view(B, T, C_, H_, W_)
-        print(z.shape)
         hid = self.hid(z)
         hid = hid.reshape(B*T, C_, H_, W_)
-        """
+        
 
-        Y = self.dec(embed)
+        Y = self.dec(hid)
         Y = Y.reshape(B, T, C, H, W)
         return Y
